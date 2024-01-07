@@ -134,41 +134,6 @@ class TestSetLoader(Dataset):
     def __len__(self):
         return len(self._items)
 
-class DemoLoader (Dataset):
-    """Iceberg Segmentation dataset."""
-    NUM_CLASS = 1
-
-    def __init__(self, dataset_dir, transform=None,base_size=512,crop_size=480,suffix='.png'):
-        super(DemoLoader, self).__init__()
-        self.transform = transform
-        self.images    = dataset_dir
-        self.base_size = base_size
-        self.crop_size = crop_size
-        self.suffix    = suffix
-
-    def _demo_sync_transform(self, img):
-        base_size = self.base_size
-        img  = img.resize ((base_size, base_size), Image.BILINEAR)
-
-        # final transform
-        img = np.array(img)
-        return img
-
-    def img_preprocess(self):
-        img_path   =  self.images
-        img  = Image.open(img_path).convert('RGB')
-
-        # synchronized transform
-        img  = self._demo_sync_transform(img)
-
-        # general resize, normalize and toTensor
-        if self.transform is not None:
-            img = self.transform(img)
-
-        return img
-
-
-
 def weights_init_xavier(m):
     classname = m.__class__.__name__
     if classname.find('Conv2d') != -1:
@@ -356,28 +321,37 @@ def save_Pred_GT(pred, labels, target_image_path, val_img_ids, num, suffix):
     img.save(target_image_path + '/' + '%s_GT' % (val_img_ids[num]) + suffix)
 
 
-def save_Pred_GT_visulize(pred, img_demo_dir, img_demo_index, suffix):
+def save_Pred_GT_visulize(pred, file_path, suffix, base_size, visualize=True):
+    img_pred_path = file_path[:-4] + '_pred' + suffix
 
     predsss = np.array((pred > 0).cpu()).astype('int64') * 255
     predsss = np.uint8(predsss)
 
-    img = Image.fromarray(predsss.reshape(256, 256))
-    img.save(img_demo_dir + '/' + '%s_Pred' % (img_demo_index) +suffix)
+    img = Image.fromarray(predsss.reshape(base_size, base_size))
+    # img.save(img_demo_dir + '/' + '%s_Pred' % (img_demo_index) +suffix)
+    img.save(img_pred_path)
 
-    plt.figure(figsize=(10, 6))
-    plt.subplot(1, 2, 1)
-    img = plt.imread(img_demo_dir + '/' + img_demo_index + suffix)
-    plt.imshow(img, cmap='gray')
-    plt.xlabel("Raw Imamge", size=11)
+    if visualize:
+        plt.figure(figsize=(10, 6))
+        plt.subplot(1, 2, 1)
+        # img = plt.imread(img_demo_dir + '/' + img_demo_index + suffix)
+        img = plt.imread(file_path)
 
-    plt.subplot(1, 2, 2)
-    img = plt.imread(img_demo_dir + '/' + '%s_Pred' % (img_demo_index) +suffix)
-    plt.imshow(img, cmap='gray')
-    plt.xlabel("Predicts", size=11)
+        plt.imshow(img, cmap='gray')
+        plt.xlabel("Raw Imamge", size=11)
 
+        plt.subplot(1, 2, 2)
+        # img = plt.imread(img_demo_dir + '/' + '%s_Pred' % (img_demo_index) +suffix)
+        img = plt.imread(img_pred_path)
 
-    plt.savefig(img_demo_dir + '/' + img_demo_index + "_fuse" + suffix, facecolor='w', edgecolor='red')
-    plt.show()
+        plt.imshow(img, cmap='gray')
+        plt.xlabel("Predicts", size=11)
+
+        # plt.savefig(img_demo_dir + '/' + img_demo_index + "_fuse" + suffix, facecolor='w', edgecolor='red')
+        # plt.savefig(img_fuse_path, facecolor='w', edgecolor='red')
+        img_fuse_path = file_path[:-4] + '_fuse' + suffix
+        plt.savefig(img_fuse_path, facecolor='w', edgecolor='red')
+        plt.show()
 
 
 
